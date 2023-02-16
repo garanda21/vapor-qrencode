@@ -42,10 +42,12 @@ extension QREncode {
                 {
                     var data:Data?
                     let imagePath = URL(fileURLWithPath: fullPath)
-                    
+                    #if os(macOS)
                     guard imagePath.startAccessingSecurityScopedResource() else {
+                        continuation.resume(returning: nil)
                         return
                     }
+                    #endif
                     data = try? Data(contentsOf: imagePath)
                     do {
                         if FileManager.default.fileExists(atPath: fullPath) {
