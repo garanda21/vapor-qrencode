@@ -22,7 +22,7 @@ extension QREncode {
                 // Save input pages to temp files, and build up args to qrencode
                 var qrArgs: [String] = [
                     "--type", self.format.rawValue,
-                    "-o", fullPath,
+                    "-o", self.output == .stdout ? "-" : fullPath ,
                     "-s", self.size.rawValue,
                     "-m", "1"
                 ]
@@ -33,28 +33,43 @@ extension QREncode {
                 // Call qrencode and retrieve the result data
                 let qrencode = Process()
                 let stdout = Pipe()
-                qrencode.launchPath = self.launchPath
+                qrencode.executableURL = URL(fileURLWithPath: self.launchPath)
                 qrencode.arguments = qrArgs
                 qrencode.standardOutput = stdout
-                qrencode.launch()
+                try qrencode.run()
                 
                 DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + TimeInterval(0.5)) 
                 {
-                    var data:Data?
-                    let imagePath = URL(fileURLWithPath: fullPath)
-                    #if os(macOS)
-                    guard imagePath.startAccessingSecurityScopedResource() else {
-                        continuation.resume(returning: nil)
-                        return
+                    if self.output == .stdout
+                    {
+                        let outputData = stdout.fileHandleForReading.readDataToEndOfFile()
+                        continuation.resume(returning: outputData)
                     }
-                    #endif
-                    data = try? Data(contentsOf: imagePath)
-                    do {
-                        if FileManager.default.fileExists(atPath: fullPath) {
-                            try? FileManager.default.removeItem(atPath: fullPath)
+                    else
+                    {
+                        var data:Data?
+                        let imagePath = URL(fileURLWithPath: fullPath)
+                        #if os(macOS)
+                        guard imagePath.startAccessingSecurityScopedResource() else {
+                            continuation.resume(returning: nil)
+                            return
                         }
+                        #endif
+                        data = try? Data(contentsOf: imagePath)
+                        do {
+                            if FileManager.default.fileExists(atPath: fullPath) {
+                                try? FileManager.default.removeItem(atPath: fullPath)
+                            }
+                        }
+                        continuation.resume(returning: data)
                     }
-                    continuation.resume(returning: data)
+                    do
+                    {
+                        try stdout.fileHandleForReading.close()
+                    }
+                    catch{
+                        print(error)
+                    }
                 }
             }.flatMapErrorThrowing { err in
                 continuation.resume(throwing: err)

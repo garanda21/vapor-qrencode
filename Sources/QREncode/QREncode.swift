@@ -1,3 +1,9 @@
+public enum QROutput: String
+{
+    case stdout
+    case tempFile
+}
+
 public enum QRFormat: String
 {
     case PNG
@@ -27,6 +33,7 @@ public class QREncode {
     let size: QRSize
     let launchPath: String
     let format: QRFormat
+    let output: QROutput
     /// A list of extra arguments which will be send to qrencode directly
     ///
     ///
@@ -34,11 +41,12 @@ public class QREncode {
     let qrArgs: [String]
     
 
-    public init(text: String,fileName: String, size: QRSize = .medium ,format: QRFormat = .PNG, path: String = "/usr/bin/qrencode", qrArgs: [String] = []) {
+    public init(text: String,fileName: String, size: QRSize = .medium ,format: QRFormat = .PNG, output: QROutput = .stdout, path: String = "/usr/bin/qrencode", qrArgs: [String] = []) {
         self.text = text
         self.fileName = fileName
         self.size = size
         self.format = format
+        self.output = output
         self.launchPath = path
         self.qrArgs = qrArgs
     }
